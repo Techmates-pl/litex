@@ -36,13 +36,16 @@ class LatticeDiamondToolchain(GenericToolchain):
 
     def __init__(self):
         super().__init__()
+        self.custom_constraints = []
 
     def build(self, platform, fragment,
         timingstrict   = False,
+        strategy = None,
         **kwargs):
 
         self._timingstrict = timingstrict
-
+        self._strategy = strategy
+        
         return GenericToolchain.build(self, platform, fragment, **kwargs)
 
     # Helpers --------------------------------------------------------------------------------------
@@ -90,6 +93,14 @@ class LatticeDiamondToolchain(GenericToolchain):
                 "PORT" if clk_name in [name for name, _, _, _ in self.named_sc] else "NET",
                 clk_name,
                 str(1e3/period)))
+        
+        for _from, _to in sorted(self.false_paths, key=lambda x: (x[0].duid, x[1].duid)):
+            _from_name = self._vns.get_name(_from)
+            _to_name = self._vns.get_name(_to)
+            lpf.append("BLOCK PATH FROM CLKNET \"{}\" TO CLKNET \"{}\";".format(
+                _from_name, _to_name))
+        
+        lpf += self.custom_constraints
 
         tools.write_to_file(self._build_name + ".lpf", "\n".join(lpf))
 
@@ -118,6 +129,10 @@ class LatticeDiamondToolchain(GenericToolchain):
 
         # Set top level
         tcl.append("prj_impl option top \"{}\"".format(self._build_name))
+
+        # Set strategy, if defined
+        if self._strategy is not None:
+            tcl.append("prj_strgy set \"{}\"".format(self._strategy))
 
         # Save project
         tcl.append("prj_project save")
