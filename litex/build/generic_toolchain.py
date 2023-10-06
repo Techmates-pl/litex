@@ -169,5 +169,5 @@ class GenericToolchain:
     def add_false_path_constraint(self, platform, from_, to):
         from_.attr.add("keep")
         to.attr.add("keep")
-        if (to, from_) not in self.false_paths:
+        if (from_, to) not in self.false_paths:
             self.false_paths.add((from_, to))
